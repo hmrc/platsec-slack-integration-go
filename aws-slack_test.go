@@ -71,3 +71,13 @@ func Test_getEnvVariables_returns_values(t *testing.T) {
 		t.Errorf("config environmental variables not valid %s", diff)
 	}
 }
+
+func Test_validateEnvironmentVariables_single_key_returns_false(t *testing.T) {
+	testKeys := []string{"testKey1"}
+	want := false
+	got := ValidateEnvConfig(testKeys, 0)
+
+	if want != got {
+		t.Errorf("%v returned expected %v", got, want)
+	}
+}

@@ -72,4 +72,20 @@ func GetEnvConfig() map[string]string {
 	}
 }
 
+// ValidateEnvConfig validates keys in config settings.
+func ValidateEnvConfig(configKeys []string, index int) bool {
+	validKey := true
+	if index <= len(configKeys)-1 {
+		_, result := os.LookupEnv(configKeys[index])
+		validKey = result
+		if result {
+			index++
+			if index <= len(configKeys)-1 {
+				validKey = ValidateEnvConfig(configKeys, index)
+			}
+		}
+	}
+	return validKey
+}
+
 var s = SendMessage(NewSlackNotifierConfig("mteasdal", "token", "s"))
