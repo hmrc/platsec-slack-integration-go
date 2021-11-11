@@ -47,7 +47,7 @@ func Test_buildHeaders_returns_valid_map(t *testing.T) {
 	got := buildHeaders(NewSlackNotifierConfig("mteasdal", "12344", "testUrl"))
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Error("Incorrect build_headers result")
+		t.Errorf("Incorrect build_headers result expected: %v got: %v",want,got)
 	}
 }
 
