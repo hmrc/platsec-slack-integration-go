@@ -26,6 +26,7 @@ func GetParameterValueFromSSM(ctx context.Context, api SSMGetParameterAPI, param
 	return parameterOutput.Parameter.Value, nil
 }
 
+// LoadConfig creates a config to be use with aws clients.
 func LoadConfig() aws.Config {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -33,4 +34,10 @@ func LoadConfig() aws.Config {
 	}
 
 	return cfg
+}
+
+// GenerateSSMClient creates the client to interact with SSM.
+func GenerateSSMClient(config aws.Config) SSMGetParameterAPI {
+	client := ssm.NewFromConfig(config)
+	return client
 }

@@ -1,3 +1,5 @@
+// +build slack
+
 package platsec_slack_integration_go
 
 import (
@@ -12,6 +14,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("SLACK_TOKEN_KEY", "/service_accounts/platsec_alerts_slack_password")
 	os.Setenv("SLACK_USERNAME_KEY", "/service_accounts/platsec_alerts_slack_username")
 	os.Setenv("SSM_READ_ROLE", "platsec_compliance_alerting_read_ssm_parameters_role")
+	os.Setenv("AWS_ACCOUNT","123456789")
 	extVal := m.Run()
 	os.Exit(extVal)
 }
@@ -44,10 +47,10 @@ func Test_buildHeaders_returns_valid_map(t *testing.T) {
 		"Authorization": "Basic mteasdal:12345685",
 	}
 
-	got := buildHeaders(NewSlackNotifierConfig("mteasdal", "12344", "testUrl"))
+	got := buildHeaders(NewSlackNotifierConfig("mteasdal", "12344", "testUrl","",""))
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("Incorrect build_headers result expected: %v got: %v",want,got)
+		t.Errorf("Incorrect build_headers result expected: %v got: %v", want, got)
 	}
 }
 
@@ -57,14 +60,16 @@ func Test_getEnvVariables_returns_values(t *testing.T) {
 		"SLACK_USERNAME_KEY": "/service_accounts/platsec_alerts_slack_username",
 		"SLACK_TOKEN_KEY":    "/service_accounts/platsec_alerts_slack_password",
 		"SSM_READ_ROLE":      "platsec_compliance_alerting_read_ssm_parameters_role",
+		"AWS_ACCOUNT": "123456789",
 	}
 
-	got := GetEnvConfig()
+	got := getEnvConfig()
 	t.Cleanup(func() {
 		os.Unsetenv("SLACK_API_URL")
 		os.Unsetenv("SLACK_USERNAME_KEY")
 		os.Unsetenv("SLACK_TOKEN_KEY")
 		os.Unsetenv("SSM_READ_ROLE")
+		os.Unsetenv("AWS_ACCOUNT")
 	})
 
 	if diff := cmp.Diff(want, got); diff != "" {
@@ -75,9 +80,41 @@ func Test_getEnvVariables_returns_values(t *testing.T) {
 func Test_validateEnvironmentVariables_single_key_returns_false(t *testing.T) {
 	testKeys := []string{"testKey1"}
 	want := false
-	got := ValidateEnvConfig(testKeys, 0)
+	got := validateEnvConfig(testKeys, 0)
 
 	if want != got {
 		t.Errorf("%v returned expected %v", got, want)
+	}
+}
+
+func Test_createConfig_returns_valid_config_struct(t *testing.T) {
+
+
+	cases :=[]struct{
+		configItems map[string]string
+		expected SlackNotifierConfig
+	}{
+		{
+			configItems : map[string]string{
+			"SLACK_API_URL":"testURL",
+			"SLACK_USERNAME_KEY":"testUsername",
+			"SLACK_TOKEN_KEY":"testToken",
+			"SSM_READ_ROLE":"testRole",
+			"AWS_ACCOUNT":"123456879",
+			},
+			expected: SlackNotifierConfig{
+				username: "testUsername",
+				apiUrl: "testURL",
+				token: "testToken",
+				ssmRole: "testRole",
+				awsAccount: "123456789",
+			},
+		},
+	}
+	for _, c := range cases {
+		actual:= assignConfigItems(c.configItems)
+		if actual == (SlackNotifierConfig{}) {
+			t.Error("empty config item created")
+		}
 	}
 }

@@ -1,11 +1,14 @@
+// +build aws
+
 package platsec_slack_integration_go
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"strconv"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -16,26 +19,29 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
-type mockGetParameterAPI func(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options))(*ssm.GetParameterOutput, error)
+type mockGetParameterAPI func(ctx context.Context, params *ssm.GetParameterInput,
+	optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
 
-func (m mockGetParameterAPI) GetParameter(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error){
-   return m(ctx,params,optFns...)
+func (m mockGetParameterAPI) GetParameter(ctx context.Context, params *ssm.GetParameterInput,
+	optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
+	return m(ctx, params, optFns...)
 }
 
 func TestGetParameterValueFromSSM(t *testing.T) {
 	cases := []struct {
 		client func(t *testing.T) SSMGetParameterAPI
-		name string
+		name   string
 		expect string
 	}{
 		{
 			client: func(t *testing.T) SSMGetParameterAPI {
-				return mockGetParameterAPI(func(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options))(*ssm.GetParameterOutput, error) {
+				// Convert passed in function as type mockGetParameterAPI
+				return mockGetParameterAPI(func(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
 					t.Helper()
 					paramValue := "23456"
 
 					if params.Name == nil {
-						t.Error("parameter name cannnot be blank")
+						t.Error("parameter name cannot be blank")
 					}
 
 					return &ssm.GetParameterOutput{
@@ -43,7 +49,7 @@ func TestGetParameterValueFromSSM(t *testing.T) {
 					}, nil
 				})
 			},
-			name: "testParamName",
+			name:   "testParamName",
 			expect: "23456",
 		},
 	}
