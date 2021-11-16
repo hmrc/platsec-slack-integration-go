@@ -89,7 +89,6 @@ func Test_validateEnvironmentVariables_single_key_returns_false(t *testing.T) {
 
 func Test_createConfig_returns_valid_config_struct(t *testing.T) {
 
-
 	cases :=[]struct{
 		configItems map[string]string
 		expected SlackNotifierConfig
@@ -115,6 +114,40 @@ func Test_createConfig_returns_valid_config_struct(t *testing.T) {
 		actual:= assignConfigItems(c.configItems)
 		if actual == (SlackNotifierConfig{}) {
 			t.Error("empty config item created")
+		}
+	}
+}
+
+func Test_createConfig_returns_empty_config_struct(t *testing.T) {
+	cases := []struct {
+		configItems map[string]string
+		expected SlackNotifierConfig
+	}{
+		{
+			configItems : map[string]string{
+				"SLACK_API_URL":"testURL",
+				"SLACK_USERNAME_KEY":"testUsername",
+				"SLACK_TOKEN_KEY":"testToken",
+				"SSM_READ_ROLE":"testRole",
+				"AWS_ACCOUNT":"123456879",
+				"DUMMMY_VAR":"falseValue",
+			},
+			expected : SlackNotifierConfig{},
+		},
+		{
+			configItems : map[string]string{
+				"SLACK_API_URL":"testURL",
+				"SSM_READ_ROLE":"testRole",
+				"AWS_ACCOUNT":"123456879",
+			},
+			expected : SlackNotifierConfig{},
+		},
+	}
+
+	for _ ,c:= range cases{
+		actual := assignConfigItems(c.configItems)
+		if actual != (SlackNotifierConfig{}){
+			t.Error("empty config item not returned")
 		}
 	}
 }

@@ -39,5 +39,6 @@ func LoadConfig() aws.Config {
 // GenerateSSMClient creates the client to interact with SSM.
 func GenerateSSMClient(config aws.Config) SSMGetParameterAPI {
 	client := ssm.NewFromConfig(config)
+
 	return client
 }
