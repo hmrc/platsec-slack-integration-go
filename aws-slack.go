@@ -2,13 +2,12 @@ package platsec_slack_integration_go
 
 import (
 	b64 "encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 )
 
 type SlackMessage struct {
-	channels []string
+	channels string
 	header   string
 	title    string
 	text     string
@@ -31,18 +30,25 @@ const (
 	AWS_ACCOUNT                 = "AWS_ACCOUNT"
 )
 
-func NewSlackMessage(channels []string, header string, title string, text string, colour string) (SlackMessage, error) {
+// createSlackMessages generates a list of slack messages depending on the number of channels supplied.
+func createSlackMessages(channels []string, header string, title string, text string, colour string) ([]SlackMessage, int) {
+	slackMessages := make([]SlackMessage, len(channels))
+
 	if len(channels) < 1 {
-		return SlackMessage{}, errors.New("no channels specified")
+		return []SlackMessage{}, 0
 	}
 
-	return SlackMessage{
-		channels: channels,
-		header:   header,
-		title:    title,
-		text:     text,
-		colour:   colour,
-	}, nil
+	for _, channel := range channels {
+		slackMessages = append(slackMessages, SlackMessage{
+			channels: channel,
+			header:   header,
+			title:    title,
+			text:     text,
+			colour:   colour,
+		})
+	}
+
+	return slackMessages, len(channels)
 }
 
 // NewSlackNotifierConfig returns a config struct.
