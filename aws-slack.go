@@ -7,7 +7,7 @@ import (
 )
 
 type SlackMessage struct {
-	channels string
+	channels []string
 	header   string
 	title    string
 	text     string
@@ -22,6 +22,29 @@ type SlackNotifierConfig struct {
 	ssmRole    string
 }
 
+type (
+	messagePayload struct {
+		channelLookup
+		messageDetails
+	}
+	channelLookup struct {
+		by            string
+		slackChannels []string
+	}
+	messageDetails struct {
+		text        string
+		attachments attachments
+	}
+	attachments struct {
+		attachment []attachmentItem
+	}
+	attachmentItem struct {
+		color string
+		title string
+		text  string
+	}
+)
+
 const (
 	SLACK_API_URL_ENV_NAME      = "SLACK_API_URL"
 	SLACK_USERNAME_KEY_ENV_NAME = "SLACK_USERNAME_KEY"
@@ -29,6 +52,19 @@ const (
 	SSM_READ_ROLE_ENV_NAME      = "SSM_READ_ROLE"
 	AWS_ACCOUNT                 = "AWS_ACCOUNT"
 )
+
+/*
+type HttpPostAPI interface {
+	Post(url string, contentType string, body io.Reader) (resp *http.Response, err error)
+}
+
+// notifySlack sends message to Slack via the Platops service.
+func notifySlack(config SlackNotifierConfig, messages []SlackMessage, httpClient HttpPostAPI) (*http.Response, error) {
+	for _, msg := range messages {
+		httpClient.Post(config.apiUrl,)
+	}
+}
+*/
 
 // createSlackMessages generates a list of slack messages depending on the number of channels supplied.
 func createSlackMessages(channels []string, header string, title string, text string, colour string) ([]SlackMessage, int) {
@@ -38,15 +74,13 @@ func createSlackMessages(channels []string, header string, title string, text st
 		return []SlackMessage{}, 0
 	}
 
-	for _, channel := range channels {
-		slackMessages = append(slackMessages, SlackMessage{
-			channels: channel,
-			header:   header,
-			title:    title,
-			text:     text,
-			colour:   colour,
-		})
-	}
+	slackMessages = append(slackMessages, SlackMessage{
+		channels: channels,
+		header:   header,
+		title:    title,
+		text:     text,
+		colour:   colour,
+	})
 
 	return slackMessages, len(channels)
 }
@@ -118,4 +152,28 @@ func assignConfigItems(configItems map[string]string) SlackNotifierConfig {
 		ssmRole:    configItems["SSM_READ_ROLE"],
 		awsAccount: configItems["AWS_ACCOUNT"],
 	}
+}
+
+// generatePayload creates a service specific message.
+func generatePayload(msg SlackMessage, config SlackNotifierConfig) messagePayload {
+	payload := messagePayload{
+		channelLookup{
+			by:            "slack-channel",
+			slackChannels: msg.channels,
+		},
+		messageDetails{
+			text: msg.header,
+			attachments: attachments{
+				attachment: []attachmentItem{
+					{
+						color: msg.colour,
+						title: msg.title,
+						text:  msg.text,
+					},
+				},
+			},
+		},
+	}
+
+	return payload
 }

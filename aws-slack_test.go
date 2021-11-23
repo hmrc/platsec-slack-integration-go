@@ -162,7 +162,8 @@ func Test_createSlackMessages(t *testing.T) {
 			colour:       "Red",
 			messageCount: 1,
 			expected: []SlackMessage{
-				{channels: "testChannel1",
+				{
+					channels: []string{"testChannel1"},
 					header: "testHeader",
 					title:  "testTitle",
 					text:   "testMessage",
@@ -179,3 +180,59 @@ func Test_createSlackMessages(t *testing.T) {
 		}
 	}
 }
+
+func Test_GeneratePayload(t *testing.T){
+	comparer := cmp.Comparer(func(x,y messagePayload) bool {
+	     return x.text == y.text && x.messageDetails.text == y.messageDetails.text &&
+	     	len(x.channelLookup.slackChannels) == len(y.channelLookup.slackChannels)
+	})
+
+	cases := []struct{
+		message SlackMessage
+		config SlackNotifierConfig
+		expected messagePayload
+	}{
+		{
+			SlackMessage{
+				channels: []string{"testChannel1", "testChannel2"},
+				header:   "testHeader",
+				text:     "testMessage",
+				colour:   "red",
+				title:    "testTitle",
+			},
+			SlackNotifierConfig{
+				username:   SLACK_USERNAME_KEY_ENV_NAME,
+				apiUrl:     SLACK_API_URL_ENV_NAME,
+				ssmRole:    SSM_READ_ROLE_ENV_NAME,
+				awsAccount: AWS_ACCOUNT,
+				token:      SLACK_TOKEN_KEY_ENV_NAME,
+			},
+			messagePayload{
+				channelLookup{
+					by:            "slack-channel",
+					slackChannels: []string{"testChannel1", "testChannel2"},
+				},
+				messageDetails{
+					text: "testHeader",
+					attachments: attachments{
+						attachment: []attachmentItem{
+							{
+								color: "red",
+								title: "testTitle",
+								text:  "testMessage",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, c := range cases {
+		actual := generatePayload(c.message, c.config)
+
+		if diff := cmp.Equal(c.expected, actual, comparer); !diff{
+			t.Errorf("error generating payload expecting %v, got %v",c.expected,actual)
+		}
+	}
+}
+
