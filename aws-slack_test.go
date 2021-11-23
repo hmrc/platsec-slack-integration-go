@@ -182,15 +182,14 @@ func Test_createSlackMessages(t *testing.T) {
 }
 
 func Test_GeneratePayload(t *testing.T){
-	comparer := cmp.Comparer(func(x,y messagePayload) bool {
-	     return x.text == y.text && x.messageDetails.text == y.messageDetails.text &&
-	     	len(x.channelLookup.slackChannels) == len(y.channelLookup.slackChannels)
+	comparer := cmp.Comparer(func(x,y MessagePayload) bool {
+	     return x.Text == y.Text && x.MessageDetails.Text == y.MessageDetails.Text &&
+	     	len(x.ChannelLookup.SlackChannels) == len(y.ChannelLookup.SlackChannels)
 	})
 
 	cases := []struct{
 		message SlackMessage
-		config SlackNotifierConfig
-		expected messagePayload
+		expected MessagePayload
 	}{
 		{
 			SlackMessage{
@@ -200,38 +199,64 @@ func Test_GeneratePayload(t *testing.T){
 				colour:   "red",
 				title:    "testTitle",
 			},
-			SlackNotifierConfig{
-				username:   SLACK_USERNAME_KEY_ENV_NAME,
-				apiUrl:     SLACK_API_URL_ENV_NAME,
-				ssmRole:    SSM_READ_ROLE_ENV_NAME,
-				awsAccount: AWS_ACCOUNT,
-				token:      SLACK_TOKEN_KEY_ENV_NAME,
-			},
-			messagePayload{
-				channelLookup{
-					by:            "slack-channel",
-					slackChannels: []string{"testChannel1", "testChannel2"},
+			MessagePayload{
+				ChannelLookup{
+					By:            "slack-channel",
+					SlackChannels: []string{"testChannel1", "testChannel2"},
 				},
-				messageDetails{
-					text: "testHeader",
-					attachments: attachments{
-						attachment: []attachmentItem{
+				MessageDetails{
+					Text: "testHeader",
+					Attachments:
+						 []AttachmentItem{
 							{
-								color: "red",
-								title: "testTitle",
-								text:  "testMessage",
+								Color: "red",
+								Title: "testTitle",
+								Text:  "testMessage",
 							},
 						},
 					},
 				},
 			},
-		},
 	}
 	for _, c := range cases {
-		actual := generatePayload(c.message, c.config)
+		actual := generatePayload(c.message)
 
 		if diff := cmp.Equal(c.expected, actual, comparer); !diff{
 			t.Errorf("error generating payload expecting %v, got %v",c.expected,actual)
+		}
+	}
+}
+
+func Test_marshall_message_data_returns_valid_msg(t *testing.T){
+	cases := []struct {
+		message MessagePayload
+	}{
+		{
+			MessagePayload{
+				ChannelLookup{
+					By:            "slack-channel",
+					SlackChannels: []string{"testChannel1", "testChannel2"},
+				},
+				MessageDetails{
+					Text: "testHeader",
+					Attachments:
+						 []AttachmentItem{
+							{
+								Color: "red",
+								Title: "testTitle",
+								Text:  "testMessage",
+							},
+						},
+					},
+				},
+
+			},
+	}
+
+	for _, c := range cases {
+		_ , err := marshallPayload(c.message)
+		if err != nil {
+			t.Error(err)
 		}
 	}
 }

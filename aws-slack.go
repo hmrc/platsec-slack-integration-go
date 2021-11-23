@@ -2,6 +2,7 @@ package platsec_slack_integration_go
 
 import (
 	b64 "encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -23,25 +24,22 @@ type SlackNotifierConfig struct {
 }
 
 type (
-	messagePayload struct {
-		channelLookup
-		messageDetails
+	MessagePayload struct {
+		ChannelLookup  `json:"channelLookup"`
+		MessageDetails `json:"messageDetails"`
 	}
-	channelLookup struct {
-		by            string
-		slackChannels []string
+	ChannelLookup struct {
+		By            string   `json:"by"`
+		SlackChannels []string `json:"slackChannels"`
 	}
-	messageDetails struct {
-		text        string
-		attachments attachments
+	MessageDetails struct {
+		Text        string           `json:"text"`
+		Attachments []AttachmentItem `json:"attachments"`
 	}
-	attachments struct {
-		attachment []attachmentItem
-	}
-	attachmentItem struct {
-		color string
-		title string
-		text  string
+	AttachmentItem struct {
+		Color string `json:"color"`
+		Title string `json:"title"`
+		Text  string `json:"text"`
 	}
 )
 
@@ -59,9 +57,9 @@ type HttpPostAPI interface {
 }
 
 // notifySlack sends message to Slack via the Platops service.
-func notifySlack(config SlackNotifierConfig, messages []SlackMessage, httpClient HttpPostAPI) (*http.Response, error) {
+func notifySlack(config SlackNotifierConfig, messages []messagePayload, httpClient HttpPostAPI) (*http.Response, error) {
 	for _, msg := range messages {
-		httpClient.Post(config.apiUrl,)
+		httpClient.Post(config.apiUrl, msg,)
 	}
 }
 */
@@ -155,25 +153,35 @@ func assignConfigItems(configItems map[string]string) SlackNotifierConfig {
 }
 
 // generatePayload creates a service specific message.
-func generatePayload(msg SlackMessage, config SlackNotifierConfig) messagePayload {
-	payload := messagePayload{
-		channelLookup{
-			by:            "slack-channel",
-			slackChannels: msg.channels,
+func generatePayload(msg SlackMessage) MessagePayload {
+	payload := MessagePayload{
+		ChannelLookup{
+			By:            "slack-channel",
+			SlackChannels: msg.channels,
 		},
-		messageDetails{
-			text: msg.header,
-			attachments: attachments{
-				attachment: []attachmentItem{
-					{
-						color: msg.colour,
-						title: msg.title,
-						text:  msg.text,
-					},
+		MessageDetails{
+			Text: msg.header,
+			Attachments: []AttachmentItem{
+				{
+					Color: msg.colour,
+					Title: msg.title,
+					Text:  msg.text,
 				},
 			},
 		},
 	}
 
 	return payload
+}
+
+// marshallPayload returns a string representation of JSON data.
+func marshallPayload(msg MessagePayload) (string, error) {
+	var jsonData []byte
+
+	jsonData, err := json.Marshal(msg)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonData), nil
 }
