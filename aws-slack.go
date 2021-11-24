@@ -1,9 +1,12 @@
 package platsec_slack_integration_go
 
 import (
+	"bytes"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 )
 
@@ -51,18 +54,20 @@ const (
 	AWS_ACCOUNT                 = "AWS_ACCOUNT"
 )
 
-/*
 type HttpPostAPI interface {
 	Post(url string, contentType string, body io.Reader) (resp *http.Response, err error)
 }
 
 // notifySlack sends message to Slack via the Platops service.
-func notifySlack(config SlackNotifierConfig, messages []messagePayload, httpClient HttpPostAPI) (*http.Response, error) {
-	for _, msg := range messages {
-		httpClient.Post(config.apiUrl, msg,)
+func notifySlack(config SlackNotifierConfig, message []byte, httpClient HttpPostAPI) (*http.Response, error) {
+	responseBody := bytes.NewBuffer(message)
+	response, err := httpClient.Post(config.apiUrl, "application/json", responseBody)
+	if err != nil {
+		return nil, err
 	}
+
+	return response, nil
 }
-*/
 
 // createSlackMessages generates a list of slack messages depending on the number of channels supplied.
 func createSlackMessages(channels []string, header string, title string, text string, colour string) ([]SlackMessage, int) {
@@ -95,6 +100,14 @@ func NewSlackNotifierConfig(username string, token string, apiUrl string, awsAcc
 }
 
 func SendMessageWithEnvVars() bool {
+	keysToValidate := []string{"SLACK_API_URL", "SLACK_USERNAME_KEY", "SLACK_TOKEN_KEY", "SSM_READ_ROLE", "AWS_ACCOUNT"}
+	keysPresent := validateEnvConfig(keysToValidate, 0)
+
+	if !keysPresent {
+		return keysPresent
+		os.Exit(-1)
+	}
+
 	return true
 }
 
@@ -175,13 +188,13 @@ func generatePayload(msg SlackMessage) MessagePayload {
 }
 
 // marshallPayload returns a string representation of JSON data.
-func marshallPayload(msg MessagePayload) (string, error) {
+func marshallPayload(msg MessagePayload) ([]byte, error) {
 	var jsonData []byte
 
 	jsonData, err := json.Marshal(msg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(jsonData), nil
+	return jsonData, nil
 }

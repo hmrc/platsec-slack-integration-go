@@ -4,11 +4,18 @@
 package platsec_slack_integration_go
 
 import (
-	"os"
-	"testing"
-
 	"github.com/google/go-cmp/cmp"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"testing"
 )
+
+type mockHTTPPostAPI func (url string, contentType string, body io.Reader)(resp *http.Response, err error)
+func (m mockHTTPPostAPI) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error){
+	return m(url, contentType, body)
+}
 
 func TestMain(m *testing.M) {
 	os.Setenv("SLACK_API_URL", "https://slack-notifications.tax.service.gov.uk/slack-notifications/notification")
@@ -19,6 +26,43 @@ func TestMain(m *testing.M) {
 	extVal := m.Run()
 	os.Exit(extVal)
 }
+
+func Test_notifySlack(t *testing.T){
+	cases := []struct{
+		client func(t *testing.T) HttpPostAPI
+		config SlackNotifierConfig
+		msg []byte
+	}{
+		{
+			client: func(t *testing.T) HttpPostAPI {
+				return mockHTTPPostAPI(func(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
+					t.Helper()
+					return &http.Response{
+						Status: "200 OK",
+						StatusCode: 200,
+					}, nil
+				})
+			},
+			config: SlackNotifierConfig{
+				apiUrl: "testUrl",
+			},
+			msg: []byte("Test Message"),
+		},
+	}
+
+	for i, tt := range cases{
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			resp, err := notifySlack(tt.config,tt.msg,tt.client(t))
+			if err != nil {
+				t.Fatalf("expected no error got %v", err)
+			}
+			if resp.StatusCode != 200 {
+				t.Errorf("expected Status Code 200 got %v", resp.StatusCode)
+			}
+		})
+	}
+}
+
 
 func Test_createNewSlackMessage_returns_error_empty_channel(t *testing.T) {
 	var channels []string
@@ -254,9 +298,13 @@ func Test_marshall_message_data_returns_valid_msg(t *testing.T){
 	}
 
 	for _, c := range cases {
-		_ , err := marshallPayload(c.message)
+		msgData , err := marshallPayload(c.message)
 		if err != nil {
 			t.Error(err)
+		}
+
+		if len(msgData) == 0 {
+			t.Error("message serialisation returned an empty payload")
 		}
 	}
 }
