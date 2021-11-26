@@ -12,8 +12,9 @@ import (
 	"testing"
 )
 
-type mockHTTPPostAPI func (url string, contentType string, body io.Reader)(resp *http.Response, err error)
-func (m mockHTTPPostAPI) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error){
+type mockHTTPPostAPI func(url string, contentType string, body io.Reader) (resp *http.Response, err error)
+
+func (m mockHTTPPostAPI) Post(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	return m(url, contentType, body)
 }
 
@@ -27,18 +28,18 @@ func TestMain(m *testing.M) {
 	os.Exit(extVal)
 }
 
-func Test_notifySlack(t *testing.T){
-	cases := []struct{
+func Test_notifySlack(t *testing.T) {
+	cases := []struct {
 		client func(t *testing.T) HttpPostAPI
 		config SlackNotifierConfig
-		msg []byte
+		msg    []byte
 	}{
 		{
 			client: func(t *testing.T) HttpPostAPI {
 				return mockHTTPPostAPI(func(url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 					t.Helper()
 					return &http.Response{
-						Status: "200 OK",
+						Status:     "200 OK",
 						StatusCode: 200,
 					}, nil
 				})
@@ -50,9 +51,9 @@ func Test_notifySlack(t *testing.T){
 		},
 	}
 
-	for i, tt := range cases{
+	for i, tt := range cases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			resp, err := notifySlack(tt.config,tt.msg,tt.client(t))
+			resp, err := notifySlack(tt.config, tt.msg, tt.client(t))
 			if err != nil {
 				t.Fatalf("expected no error got %v", err)
 			}
@@ -62,7 +63,6 @@ func Test_notifySlack(t *testing.T){
 		})
 	}
 }
-
 
 func Test_createNewSlackMessage_returns_error_empty_channel(t *testing.T) {
 	var channels []string
@@ -208,10 +208,10 @@ func Test_createSlackMessages(t *testing.T) {
 			expected: []SlackMessage{
 				{
 					channels: []string{"testChannel1"},
-					header: "testHeader",
-					title:  "testTitle",
-					text:   "testMessage",
-					colour: "Red",
+					header:   "testHeader",
+					title:    "testTitle",
+					text:     "testMessage",
+					colour:   "Red",
 				},
 			},
 		},
@@ -225,14 +225,14 @@ func Test_createSlackMessages(t *testing.T) {
 	}
 }
 
-func Test_GeneratePayload(t *testing.T){
-	comparer := cmp.Comparer(func(x,y MessagePayload) bool {
-	     return x.Text == y.Text && x.MessageDetails.Text == y.MessageDetails.Text &&
-	     	len(x.ChannelLookup.SlackChannels) == len(y.ChannelLookup.SlackChannels)
+func Test_GeneratePayload(t *testing.T) {
+	comparer := cmp.Comparer(func(x, y MessagePayload) bool {
+		return x.Text == y.Text && x.MessageDetails.Text == y.MessageDetails.Text &&
+			len(x.ChannelLookup.SlackChannels) == len(y.ChannelLookup.SlackChannels)
 	})
 
-	cases := []struct{
-		message SlackMessage
+	cases := []struct {
+		message  SlackMessage
 		expected MessagePayload
 	}{
 		{
@@ -250,28 +250,27 @@ func Test_GeneratePayload(t *testing.T){
 				},
 				MessageDetails{
 					Text: "testHeader",
-					Attachments:
-						 []AttachmentItem{
-							{
-								Color: "red",
-								Title: "testTitle",
-								Text:  "testMessage",
-							},
+					Attachments: []AttachmentItem{
+						{
+							Color: "red",
+							Title: "testTitle",
+							Text:  "testMessage",
 						},
 					},
 				},
 			},
+		},
 	}
 	for _, c := range cases {
 		actual := generatePayload(c.message)
 
-		if diff := cmp.Equal(c.expected, actual, comparer); !diff{
-			t.Errorf("error generating payload expecting %v, got %v",c.expected,actual)
+		if diff := cmp.Equal(c.expected, actual, comparer); !diff {
+			t.Errorf("error generating payload expecting %v, got %v", c.expected, actual)
 		}
 	}
 }
 
-func Test_marshall_message_data_returns_valid_msg(t *testing.T){
+func Test_marshall_message_data_returns_valid_msg(t *testing.T) {
 	cases := []struct {
 		message MessagePayload
 	}{
@@ -283,22 +282,20 @@ func Test_marshall_message_data_returns_valid_msg(t *testing.T){
 				},
 				MessageDetails{
 					Text: "testHeader",
-					Attachments:
-						 []AttachmentItem{
-							{
-								Color: "red",
-								Title: "testTitle",
-								Text:  "testMessage",
-							},
+					Attachments: []AttachmentItem{
+						{
+							Color: "red",
+							Title: "testTitle",
+							Text:  "testMessage",
 						},
 					},
 				},
-
 			},
+		},
 	}
 
 	for _, c := range cases {
-		msgData , err := marshallPayload(c.message)
+		msgData, err := marshallPayload(c.message)
 		if err != nil {
 			t.Error(err)
 		}
@@ -308,4 +305,3 @@ func Test_marshall_message_data_returns_valid_msg(t *testing.T){
 		}
 	}
 }
-

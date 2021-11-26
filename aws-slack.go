@@ -99,13 +99,33 @@ func NewSlackNotifierConfig(username string, token string, apiUrl string, awsAcc
 	}
 }
 
-func SendMessageWithEnvVars() bool {
+func SendMessageWithEnvVars(channels []string, header string, title string, text string, colour string) bool {
 	keysToValidate := []string{"SLACK_API_URL", "SLACK_USERNAME_KEY", "SLACK_TOKEN_KEY", "SSM_READ_ROLE", "AWS_ACCOUNT"}
 	keysPresent := validateEnvConfig(keysToValidate, 0)
 
 	if !keysPresent {
 		return keysPresent
 		os.Exit(-1)
+	}
+
+	slackConfig := assignConfigItems(getEnvConfig())
+	slackService := SlackService{}
+	slackMessages, msgCount := createSlackMessages(channels, header, title, text, colour)
+
+	if msgCount == 0 {
+		os.Exit(-1)
+	}
+
+	for _, slackMessage := range slackMessages {
+		msgPayload := generatePayload(slackMessage)
+		messageData, err := marshallPayload(msgPayload)
+		if err != nil {
+			os.Exit(-1)
+		}
+		resp, err := notifySlack(slackConfig, messageData, slackService)
+		if resp.StatusCode != 200 {
+			os.Exit(-1)
+		}
 	}
 
 	return true

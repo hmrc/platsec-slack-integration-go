@@ -1,3 +1,4 @@
+//go:build aws
 // +build aws
 
 package platsec_slack_integration_go
@@ -57,7 +58,7 @@ func TestGetParameterValueFromSSM(t *testing.T) {
 	for i, tt := range cases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			ctx := context.TODO()
-			content, err := GetParameterValueFromSSM(ctx, tt.client(t), tt.name)
+			content, err := getParameterValueFromSSM(ctx, tt.client(t), tt.name)
 			if err != nil {
 				t.Fatalf("expect no error, got %v", err)
 			}
@@ -65,5 +66,34 @@ func TestGetParameterValueFromSSM(t *testing.T) {
 				t.Errorf("expect %v, got %v", e, a)
 			}
 		})
+	}
+}
+
+func TestGetSlackService (t *testing.T){
+	cases := []struct{
+		config SlackNotifierConfig
+		expected SlackService
+	}{
+		{
+			config: SlackNotifierConfig{
+				apiUrl: "testUrl",
+				token: "testTokenKey",
+				username: "testUserName",
+				awsAccount: "12345678",
+				ssmRole: "testSSMROle",
+			},
+			expected: SlackService{
+				ssmToken: "235346466",
+				ssmUser: "ssmUsername",
+				apiUrl: "testUrl",
+			},
+		},
+	}
+
+	for _, c := range cases{
+		actual := generateSlackService(c.config)
+		if actual == nil {
+			t.Error("returned SlackService is nil")
+		}
 	}
 }
